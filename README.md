@@ -1,6 +1,7 @@
 # DNAC_aiohttp_client
 
-How to use aiohttp async client to call DNAC API
+How to use aiohttp async client to call APIs of cisco DNAC, runs as "telegraf" for TIG stack (telegraf/influx/grafana).
+This client was inspired by https://github.com/CiscoDevNet/DNAC-NOC.git, thanks aradford123.
 
 ![add-image-here]()
  
@@ -54,4 +55,4 @@ General instructions on _how_ to contribute should be stated with a link to [CON
 
 This project was written and is maintained by the following individuals:
 
-* yijxiang <yijxiang@cisco.com>
+* <yijun.xiang@gmail.com>
