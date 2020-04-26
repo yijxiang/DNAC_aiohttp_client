@@ -2,11 +2,10 @@ from aio_client.helper import create_url
 from aio_client.request import async_get
 
 
-async def site_health(session, timestamp):
-    """ Site health api call request
+async def site_health(session, timestamp, dnac):
+    """ Site health api get request
     """
-    url = create_url(f'site-health?timestamp={timestamp}')
-    return await async_get(session, url)
+    return await async_get(session, create_url(f'site-health?timestamp={timestamp}', dnac))
 
 
 def site_health_data(data):
@@ -19,8 +18,9 @@ def site_health_data(data):
         return []
 
     for one in _data:
-        if ("siteType" in one.keys()) or ("numberOfClients" in one.keys()) or ("numberOfNetworkDevice" in one.keys()):
-            if ("building" == one["siteType"]) and (one["numberOfClients"] or one["numberOfNetworkDevice"]):
+
+        if one.get("siteType"):
+            if "building" in one["siteType"] and one["numberOfNetworkDevice"]:
                 if "All Buildings" not in one["siteName"]:
                     site_has_clients.append(one)
 
