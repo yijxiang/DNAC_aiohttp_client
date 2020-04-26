@@ -54,4 +54,4 @@ General instructions on _how_ to contribute should be stated with a link to [CON
 
 This project was written and is maintained by the following individuals:
 
-* yijxiang <yijxiang@cisco.com>
+* yijxiang <yijun.xiang@gmail.com>
