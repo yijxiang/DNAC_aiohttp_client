@@ -4,13 +4,13 @@ import time
 import yaml
 import logging.config
 
-from aio_client.sitehealth import site_health, site_health_data
-from aio_client.helper import get_current_time
-from aio_client.request import async_get_auth_token
+from aioinflux import InfluxDBClient    # influx client
+from sitehealth import site_health, site_health_data, site_health_to_influx
+from helper import get_current_time
+from request import async_get_auth_token
+from dnac_env import DNA_CENTER as dnac, ENVIRONMENT_IN_USE
 
-from aio_client.dnac_env import ENVIRONMENT_IN_USE, DNA_CENTER as dnac
-
-# get the setting of DNAC server in file named "dnac_env.py".
+# DNAC server setting dict
 dnac["name"] = str(ENVIRONMENT_IN_USE).strip()
 
 # logging setting
@@ -20,13 +20,15 @@ logconsole = logging.getLogger('console')
 # -------------------------------------------------------------------
 # Global Var.
 # -------------------------------------------------------------------
-session = None  # aiohttp session
-tasks_runs_every_seconds = 10
+session = None                          # aiohttp session
 token_start_time = time.time()
 token_renew_seconds = 60 * 60
 api_failure_count = 0
 api_count = 0
-
+influxdb_client = None                        # influx client
+tasks_runs_every_seconds = 10                 # tasks periods, should be modified according to your app
+influxdb_client_host_ip = "127.0.0.1"         # influx client host ip, should be modified according to your app
+influxdb_write_enable = False                 # If you use influxDB to store data, please change it to True
 
 # -------------------------------------------------------------------
 # Helper functions
@@ -87,9 +89,9 @@ async def get_site_health(s, t):
         print("NO site with clients or network devices")
         return
 
-    # Do some action after got the site health from DNAC
+    # Do some action after got the site health data from DNAC
     # In this demo, print the information only for those site where there are network devices and clients in
-    # You can using database client ie. mysql, influx to write this data into database.
+    # If you use influx db insert data points, you can go ahead to disable print, following 7 lines
     for site in site_building_list:
         print(
             f'In building: {site["siteName"]}, for Network Device/Clients: Count- '
@@ -97,6 +99,15 @@ async def get_site_health(s, t):
             f'{site["healthyNetworkDevicePercentage"]}/{site["healthyClientsPercentage"]}, '
             f'for Wireless/Wired Clients: Count- {site["numberOfWiredClients"]}/{site["numberOfWirelessClients"]}'
             f', Healthy Percent- {site["clientHealthWired"]}/{site["clientHealthWireless"]}')
+
+    # You can using database client ie. influx to write this data point into database
+    # if using influx client, run following 6 lines
+    if influxdb_write_enable:
+        site_health_influx_data = site_health_to_influx(site_building_list)
+        for data in site_health_influx_data:
+            data.update({"time": time.time_ns()})
+        await influxdb_client.write(site_health_influx_data)
+        logconsole.info(f'write to influxdb points: {len(site_health_influx_data)}')
 
 
 async def api_task(s, t):
@@ -114,14 +125,19 @@ async def api_task(s, t):
 async def periodic(timeout):
     """ Tasks runs every periods setting by the global Variable "tasks_runs_every_seconds"
     """
-    global session, api_failure_count, api_count, token_start_time
+    global session, api_failure_count, api_count, token_start_time, influxdb_client
     looping_no = 0
     token_start_time = time.time()
+
+    # if using influx client, run following 2 lines
+    if influxdb_write_enable:
+        influxdb_client = InfluxDBClient(host=influxdb_client_host_ip, db=dnac["name"])
+        await influxdb_client.create_database(db=dnac["name"])
 
     while True:
         looping_no += 1
 
-        # If you need runs infinitely, delete following 2 lines
+        # If you need runs infinitely, NOT run the following 2 lines
         if looping_no >= 5:
             break
 
@@ -147,5 +163,4 @@ if __name__ == "__main__":
     """ main program
     """
     logconsole.info(f'collect task runs every {tasks_runs_every_seconds}s')
-    #time.sleep(math.ceil(time.time() / 60) * 60 - time.time())
     asyncio.run(periodic(tasks_runs_every_seconds))

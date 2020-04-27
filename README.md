@@ -1,58 +1,170 @@
-# DNAC_aiohttp_client
+# What is DNAC aiohttp client
 
-How to use aiohttp async client to call APIs of cisco DNAC, runs as "telegraf" for TIG stack (telegraf/influx/grafana).
-This client was inspired by https://github.com/CiscoDevNet/DNAC-NOC.git, thanks aradford123.
+This client demostrate to request async. API calls to cisco DNAC using aiohttp, runs as module "telegraf" in the TIG stack (telegraf/influx/grafana).
 
-![add-image-here]()
- 
-## Use Case Description
+[Telegraf](https://github.com/influxdata/telegraf) is an agent for collecting, processing, aggregating, and writing metrics, the **DNAC aiohttp client** does:
 
-Describe the problem this code addresses, how your code solves the problem, challenges you had to overcome as part of the solution, and optional ideas you have in mind that could further extend your solution.
+- trigger to collect metric: periodically to run the api calls target to DNAC
+- processing the collected JSON data
+- write to influx database using python client: [ aioinflux ](https://aioinflux.readthedocs.io/en/stable/)
 
-## Installation
+It was inspired by https://github.com/CiscoDevNet/DNAC-NOC.git. 
 
-Detailed instructions on how to install, configure, and get the project running. Call out any dependencies. This should be frequently tested and updated to make sure it works reliably, accounts for updated versions of dependencies, etc.
+## HOW to run this client
 
-## Configuration
+### Architecture
 
-If the code is configurable, describe it in detail, either here or in other documentation that you reference.
+![Architecture](image/arch.png "aiohttp client architecture")
 
-## Usage
+### DNAC aiohttp client setup
 
-Show users how to use the code. Be specific.
-Use appropriate formatting when showing code snippets or command line output.
+#### Steps 1: Create folder and clone the project
 
-### DevNet Sandbox
+- Create new folder
+- Clone it and checkout using your favourite python IDE such as pycharm
 
-A great way to make your repo easy for others to use is to provide a link to a [DevNet Sandbox](https://developer.cisco.com/site/sandbox/) that provides a network or other resources required to use this code. In addition to identifying an appropriate sandbox, be sure to provide instructions and any configuration necessary to run your code with the sandbox.
+#### Steps 2: Setup Python virtual enviroment
 
-## How to test the software
+###### Enviroment preparing
 
-Provide details on steps to test, versions of components/dependencies against which code was tested, date the code was last tested, etc. 
-If the repo includes automated tests, detail how to run those tests.
-If the repo is instrumented with a continuous testing framework, that is even better.
+Python version 3.6.x - 3.8.x was recommended in this client because of:
+
+  - **asyncio** was introduced into after version 3.5.x.
+  - aiohttp need 3.5+
+  - aioinflux need 3.6+
 
 
-## Known issues
+Next, setup the python envir.
 
-Document any significant shortcomings with the code. If using [GitHub Issues](https://help.github.com/en/articles/about-issues) to track issues, make that known and provide any templates or conventions to be followed when opening a new issue. 
+- Go into the application folder, create the python virtual enviroment usuing "virtualenv" and install all packages.
 
-## Getting help
+``` python
+virtualenv venv --python=python3 --no-site-packages
+source venv/bin/activate
+pip install -r requirements.txt 
+```
 
-Instruct users how to get help with this code; this might include links to an issues list, wiki, mailing list, etc.
+- Check the python and packages was installed successfully.
 
-**Example**
+``` python
+python
+pip list
+```
 
-If you have questions, concerns, bug reports, etc., please create an issue against this repository.
+###### Files description in the project
+In your application folder after cloned, you will get all files in this project. Here is file description which will help you better understanding:
 
-## Getting involved
+| File name        | description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| dnac_env.py      | DNAC config, **sandbox2** was selected by default            |
+| logging.yaml     | python Logging setting                                       |
+| requirements.txt | python package list                                          |
+| client.py        | **main** entry module for this client                        |
+| request.py       | module used for aiohttp request get and post                 |
+| helper.py        | module used for helper function                              |
+| sitehealth.py    | module used for specific api: /dna/intent/api/v1/site-health |
 
-This section should detail why people should get involved and describe key areas you are currently focusing on; e.g., trying to get feedback on features, fixing certain bugs, building important pieces, etc. Include information on how to setup a development environment if different from general installation instructions.
 
-General instructions on _how_ to contribute should be stated with a link to [CONTRIBUTING](./CONTRIBUTING.md) file.
+As required, you can add or edit files in your project, at least you should modify this file **dnac_env.py**:
 
-## Author(s)
+- In *dnac_env.py*, please change the DNAC server as yours and **ENVIRONMENT_IN_USE** as *"customer"* or one different which not same as existing list: *sandbox* or *sandbox2*:
 
-This project was written and is maintained by the following individuals:
+``` python
+ENVIRONMENT_IN_USE = "customer"
 
-* <yijun.xiang@gmail.com>
+# "customer" Lab Backend, if you select "customer"
+DNA_CENTER = {
+    "host": "",
+    "port": 443,
+    "username": "",
+    "password": ""
+}
+
+```
+
+> **_Pay Attention:_**  *Please DO NOT change the file name or delete it*
+
+
+#### Steps 3: influxdb and grafana install - OPTION STEP
+
+If you do not want to write data to DB, you can go ahead to run the python script directly , some information about site health from DNA Center server you have been setup in above step will be displayed in the console.
+
+You can install influxdb via [ link to InfluxDB 1.8 ](https://docs.influxdata.com/influxdb/v1.8/introduction/install/), and grafana via [ link to Grafana latest ](https://grafana.com/docs/grafana/latest/) in your server.
+
+On _mac os_, you can using **brew** to install&run the open sourced influxdb and grafana for the demo purpose.
+
+```
+# install influxdb
+brew install influxdb
+brew install grafana
+
+# runs influxdb
+brew services start influxdb
+brew services start grafana
+
+# stop all services
+brew services stop --all
+
+# list all services
+brew services list
+
+```
+
+
+#### Steps 4: Customize the config and run python app.
+
+You should make some changes according to your requirement in *client.py* python files.
+
+##### Changes to support influxDB
+
+If you install the influx database to store data points as above option step, take the following actions:
+
+In *client.py*, if you use **aioinflux** client to store time series data to Influx:
+  - set the IP address of influx database server if you use influxDB to store the data points;
+  - set the *influxdb_write_enable* to *True*;
+
+``` python
+influxdb_client_host_ip = "x.x.x.x"          # influx client host ip, should be modified according to your app
+influxdb_write_enable = True                 # If you use influxDB to store data, please change it to True
+```
+
+During client runs, in the console logging, you should notify the following similar info included *write to influxdb points* in the console:
+```
+2020-04-27 09:56:48,988 - INFO - write to influxdb points: 3
+```
+
+> **_INFO:_**  *write to influxdb points: 3* means total 3 data groups have been written into influx database
+
+
+##### Period setting to above 60 seconds
+
+- In *client.py*, you'd better change the *tasks_runs_every_seconds* to 60/120/300 seconds to satisfy your real requirements.
+
+``` python
+tasks_runs_every_seconds = 60                 # tasks periods, should be modified according to your app
+```
+
+##### Disable loop break setting by default
+
+- In *client.py*, you should disable the loop break used for demo purpose.
+
+``` python
+        #if looping_no >= 5:
+        #    break
+```
+
+##### Run it
+
+``` 
+
+2020-04-27 09:46:46,517 - INFO - collect task runs every 10s
+2020-04-27 09:46:46,518 - INFO - looping 1 start
+2020-04-27 09:46:47,464 - INFO - Token alive: 0.00 min, refreshed successfully!
+In building: NSYD5, for Network Device/Clients: Count- 1/1, Healthy Percent- 100/100, for Wireless/Wired Clients: Count- 1/None, Healthy Percent- 100/None
+In building: MX14, for Network Device/Clients: Count- 1/8, Healthy Percent- 100/88, for Wireless/Wired Clients: Count- None/8, Healthy Percent- None/88
+In building: HQ, for Network Device/Clients: Count- 3/None, Healthy Percent- 100/None, for Wireless/Wired Clients: Count- None/None, Healthy Percent- None/None
+2020-04-27 09:46:48,848 - INFO - looping no.1 took: 2.33s, api failed/total: 0/2
+2020-04-27 09:46:56,523 - INFO - looping 2 start
+
+```
+
