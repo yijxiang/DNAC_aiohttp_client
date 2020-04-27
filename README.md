@@ -1,3 +1,5 @@
+[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/yijxiang/DNAC_aiohttp_client)
+
 # What is DNAC aiohttp client
 
 This client demostrate to request async. API calls to cisco DNAC using aiohttp, runs as module "telegraf" in the TIG stack (telegraf/influx/grafana).
