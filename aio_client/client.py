@@ -22,18 +22,24 @@ logconsole = logging.getLogger('console')
 # -------------------------------------------------------------------
 session = None                          # aiohttp session
 token_start_time = time.time()
-token_renew_seconds = 60 * 60
+token_renew_seconds = 60 * 60           # token renew every 1 hour
 api_failure_count = 0
 api_count = 0
-influxdb_client = None                        # influx client
-tasks_runs_every_seconds = 10                 # tasks periods, should be modified according to your app
+influxdb_client = None                  # influx client
+
+
+# -------------------------------------------------------------------
+# Var. NEED to modify:
+# -------------------------------------------------------------------
+tasks_runs_every_n_seconds = 30               # tasks periods, should be modified according to your app
 influxdb_client_host_ip = "127.0.0.1"         # influx client host ip, should be modified according to your app
 influxdb_write_enable = False                 # If you use influxDB to store data, please change it to True
+runs_infinitely = False                       # False: exit after runs 3 times, True: runs infinitely
+
 
 # -------------------------------------------------------------------
 # Helper functions
 # -------------------------------------------------------------------
-
 
 async def api_failure(response):
     """ In case of api calls failure, do logging and api failure count
@@ -91,7 +97,7 @@ async def get_site_health(s, t):
 
     # Do some action after got the site health data from DNAC
     # In this demo, print the information only for those site where there are network devices and clients in
-    # If you use influx db insert data points, you can go ahead to disable print, following 7 lines
+    # If you use influx db insert data points, you can go ahead to disable the following for blocks
     for site in site_building_list:
         print(
             f'In building: {site["siteName"]}, for Network Device/Clients: Count- '
@@ -101,7 +107,7 @@ async def get_site_health(s, t):
             f', Healthy Percent- {site["clientHealthWired"]}/{site["clientHealthWireless"]}')
 
     # You can using database client ie. influx to write this data point into database
-    # if using influx client, run following 6 lines
+    # if using influx client, run following if block
     if influxdb_write_enable:
         site_health_influx_data = site_health_to_influx(site_building_list)
         for data in site_health_influx_data:
@@ -123,23 +129,19 @@ async def api_task(s, t):
 
 
 async def periodic(timeout):
-    """ Tasks runs every periods setting by the global Variable "tasks_runs_every_seconds"
+    """ Tasks runs every periods setting by the global Variable "tasks_runs_every_n_seconds"
     """
     global session, api_failure_count, api_count, token_start_time, influxdb_client
     looping_no = 0
     token_start_time = time.time()
 
-    # if using influx client, run following 2 lines
+    # if using influx client, run following if block
     if influxdb_write_enable:
         influxdb_client = InfluxDBClient(host=influxdb_client_host_ip, db=dnac["name"])
         await influxdb_client.create_database(db=dnac["name"])
 
     while True:
         looping_no += 1
-
-        # If you need runs infinitely, NOT run the following 2 lines
-        if looping_no >= 5:
-            break
 
         logconsole.info(f"looping {str(looping_no)} start")
         task_run_start_time = time.time()
@@ -150,6 +152,12 @@ async def periodic(timeout):
         elapsed = time.time() - task_run_start_time
         logconsole.info(
             f"looping no.{str(looping_no)} took: {elapsed:0.2f}s, api failed/total: {api_failure_count}/{api_count}")
+
+        # If you need runs infinitely, will NOT break the while loop
+        if not runs_infinitely:
+            if looping_no >= 3:
+                break
+
         if timeout > elapsed:
             await asyncio.sleep(timeout - elapsed)
 
@@ -162,5 +170,9 @@ async def periodic(timeout):
 if __name__ == "__main__":
     """ main program
     """
-    logconsole.info(f'collect task runs every {tasks_runs_every_seconds}s')
-    asyncio.run(periodic(tasks_runs_every_seconds))
+    logconsole.info(f'collect task runs every {tasks_runs_every_n_seconds}s')
+    logconsole.info(f'The target DNAC Server is: {dnac["host"]}')
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(periodic(tasks_runs_every_n_seconds))
+    loop.run_until_complete(asyncio.sleep(0.25))
+    loop.close()
