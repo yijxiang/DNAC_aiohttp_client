@@ -90,7 +90,7 @@ In your root folder, files in folder *aio_client* lists as this table. Here is f
 | sitehealth.py    | module used for specific api: /dna/intent/api/v1/site-health |
 
 
-As required, you can also add or edit files in your project, at least you should modify the file **dnac_env.py**:
+As required, you can also add or edit files in your project, at least you should modify the file **dnac_env.py**, *sandbox2* will be used by default if you just for test purpose and DO NOT want to use your own DNAC server:
 
 - In *dnac_env.py*, please make sure to change the DNAC server as yours and **ENVIRONMENT_IN_USE** as *"customer"* or one different name which is not same as the existing one: *sandbox* or *sandbox2*:
 
