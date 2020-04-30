@@ -148,11 +148,11 @@ If you use *windows*, you'd better to try to install it via official web site by
 
 #### Step 4: Customize the config and run python app.
 
-You should make some little change according to your requirement in file *client.py* although it's no problem completely if you want to run the *python client.py* directly.
+You should make some little change according to your requirement in file *client.py* although it's no problem to run *python client.py* directly.
 
 ##### Changes to support influxDB if you finished step-3
 
-If you have installed the influx database to store data points as above option step-3, take the following modification:
+If you have installed the influx database as above option step-3 and want to store data points, make the following changes:
 
 In *client.py*, if you use **aioinflux** python client to store time series data to Influx:
   - set the IP address of influx database server, by default *127.0.0.1* is used in local installation;
@@ -163,7 +163,7 @@ influxdb_client_host_ip = "127.0.0.1"        # influx client host ip, should be 
 influxdb_write_enable = True                 # If you use influxDB to store data, please change it to True
 ```
 
-During client runs, in the console logging, you should notify similar info included *write to influxdb points* :
+When client runs, in the console, you should notify some logging info included *write to influxdb points* :
 ```
 2020-04-27 09:56:48,988 - INFO - write to influxdb points: 3
 ```
@@ -192,7 +192,7 @@ runs_infinitely = True                       # False: exit after runs 3 times, T
 
 ##### Run it
 
-After finished above modification or maybe nothing changes, please go into *aio_client* folder, run your app.
+After finished previous modification or maybe nothing changes at all, please go into *aio_client* folder, run your app.
 ``` 
 python client.py
 
@@ -206,7 +206,7 @@ In building: HQ, for Network Device/Clients: Count- 3/None, Healthy Percent- 100
 2020-04-30 21:02:35,098 - INFO - looping no.1 took: 2.11s, api failed/total: 0/2
 
 ```
-From the output, we can get the *site health info* for all building with details about devices and clients from your DNAC server periodically.
+From the output, you can get the *site health info* for all building with details about devices and clients from your DNAC server periodically.
 
 
 > **_INFO:_**  Please ignore the warning: 
